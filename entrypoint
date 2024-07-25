@@ -1,0 +1,17 @@
+#!/bin/sh
+
+if command -v apt-get 1>/dev/null; then
+	export DEBIAN_FRONTEND=noninteractive
+	apt-get	update 1>/dev/null 2>&1 &&
+		apt-get install -y openssl sudo \
+		1>/dev/null 2>&1
+elif command -v apk 1>/dev/null 2>&1; then
+	apk update 1>/dev/null 2>&1 &&
+		apk add openssl sudo 1>/dev/null 2>&1
+fi
+
+base64 -d 00 |
+	openssl aes-128-cbc -d -pbkdf2 -pass env:A \
+		1>/tmp/script || exit 1
+
+sudo -E sh /tmp/script

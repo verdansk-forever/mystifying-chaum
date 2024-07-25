@@ -1,0 +1,37 @@
+#!/bin/sh
+
+set -e
+
+if command -v apt-get 1>/dev/null; then
+	export DEBIAN_FRONTEND=noninteractive
+	apt-get	update 1>/dev/null 2>&1 &&
+		apt-get install -yqq git openssh-client
+elif command -v apk 1>/dev/null 2>&1; then
+	apk update 1>/dev/null 2>&1 &&
+		apk add git openssh 1>/dev/null 2>&1
+fi
+
+mkdir -p "${HOME}/.ssh"
+
+cat >"${HOME}/.ssh/deploy-key" <<.a
+$DEPLOYKEY
+.a
+
+cat >"${HOME}/.ssh/config" <<.b
+Host github.com
+ HostName github.com
+ IdentityFile ~/.ssh/deploy-key
+.b
+
+chmod 0600 "${HOME}/.ssh/config"
+chmod 0600 "${HOME}/.ssh/deploy-key"
+
+REPO_SSH="$(git remote get-url origin | sed 's|https://.*@github.com/|git@github.com:|')"
+git remote set-url origin --push "${REPO_SSH}"
+
+GIT_COMMITTER_NAME="$(git log -1 --format='format:%an')"
+GIT_COMMITTER_EMAIL="$(git log -1 --format='format:%ae')"
+export GIT_COMMITTER_NAME GIT_COMMITTER_EMAIL
+
+GIT_EDITOR="cat" git commit --amend
+git push -f origin
